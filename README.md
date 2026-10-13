@@ -553,7 +553,7 @@ Setiap grafik di bawah dijelaskan dengan empat bagian: apa yang ditampilkan, car
 
 #### 3. Precision, recall, dan F1 per level
 
-![Metrik per level](backend/reports/03_per_class_metrics.png)
+![Metrik per level](japanese-ai-agent/backend/reports/03_per_class_metrics.png)
 
 **Yang ditampilkan:** tiga ukuran kualitas untuk tiap level dalam batang berkelompok.
 
@@ -570,7 +570,7 @@ Setiap grafik di bawah dijelaskan dengan empat bagian: apa yang ditampilkan, car
 
 #### 4. Akurasi dibanding tebakan acak
 
-![Akurasi vs baseline](backend/reports/04_accuracy_vs_baseline.png)
+![Akurasi vs baseline](japanese-ai-agent/backend/reports/04_accuracy_vs_baseline.png)
 
 **Yang ditampilkan:** dua kelompok batang. Kelompok pertama adalah akurasi persis (level tepat sama), kelompok kedua adalah akurasi dalam ±1 level (tepat atau meleset satu level). Di tiap kelompok, batang ungu adalah model dan batang abu-abu adalah tebakan acak.
 
@@ -586,7 +586,7 @@ Setiap grafik di bawah dijelaskan dengan empat bagian: apa yang ditampilkan, car
 
 #### 5. Perbandingan konfigurasi model
 
-![Perbandingan konfigurasi](backend/reports/05_model_comparison.png)
+![Perbandingan konfigurasi](japanese-ai-agent/backend/reports/05_model_comparison.png)
 
 **Yang ditampilkan:** enam konfigurasi yang diuji dengan cara yang sama: variasi rentang n-gram karakter (1-2, 1-3, 1-4, 2-4), nilai regularisasi `C` pada Logistic Regression, dan algoritma pembanding LinearSVC. Setiap konfigurasi punya dua batang: akurasi persis dan akurasi ±1 level.
 
@@ -602,7 +602,7 @@ Setiap grafik di bawah dijelaskan dengan empat bagian: apa yang ditampilkan, car
 
 #### 6. Learning curve
 
-![Learning curve](backend/reports/06_learning_curve.png)
+![Learning curve](japanese-ai-agent/backend/reports/06_learning_curve.png)
 
 **Yang ditampilkan:** akurasi validasi saat jumlah data latih dinaikkan bertahap. Sumbu X adalah jumlah kalimat latih, sumbu Y adalah akurasi. Garis ungu adalah rata-rata, pita ungu muda adalah variasi (±1 simpangan baku) antar lipatan cross-validation, dan garis putus-putus abu-abu adalah tebakan acak.
 
@@ -618,7 +618,7 @@ Setiap grafik di bawah dijelaskan dengan empat bagian: apa yang ditampilkan, car
 
 #### 7. Probabilitas untuk contoh kalimat
 
-![Contoh probabilitas](backend/reports/07_sample_predictions.png)
+![Contoh probabilitas](japanese-ai-agent/backend/reports/07_sample_predictions.png)
 
 **Yang ditampilkan:** probabilitas yang diberikan model ke tiap level untuk tiga kalimat contoh (S1 sampai S3). Ketiga kalimat tidak ada di data latih. Teks kalimat dicantumkan di bawah dan tidak ada di grafik, agar tidak bermasalah dengan font.
 
@@ -640,7 +640,7 @@ Setiap grafik di bawah dijelaskan dengan empat bagian: apa yang ditampilkan, car
 
 ### Apa yang dipelajari model
 
-![Top n-grams per level](backend/reports/08_top_ngrams_per_level.png)
+![Top n-grams per level](japanese-ai-agent/backend/reports/08_top_ngrams_per_level.png)
 
 **Yang ditampilkan:** lima panel, satu untuk tiap level. Tiap panel berisi 10 potongan karakter (1 sampai 3 karakter) dengan bobot tertinggi untuk level itu, diambil dari koefisien Logistic Regression. Gambar ini hanya bergantung pada data latih, bukan pada kalimat uji tertentu.
 
@@ -658,7 +658,7 @@ Setiap grafik di bawah dijelaskan dengan empat bagian: apa yang ditampilkan, car
 
 Setiap kalimat uji menghasilkan satu gambar sendiri. Ganti nama file di bawah dengan nama yang muncul di `backend/reports/walkthroughs/` (atau salin dari `index.md` di folder itu).
 
-![Kalimat contoh 1](japanese-ai-agent/backend/reports/walkthroughs/walkthrough_xxxxxxxx.png)
+![Kalimat contoh 1](japanese-ai-agent/backend/reports/walkthroughs/walkthrough_885e443a.png)
 ![Kalimat contoh 2](backend/reports/walkthroughs/walkthrough_yyyyyyyy.png)
 
 **Yang ditampilkan:** satu gambar berisi tiga panel yang menunjukkan perjalanan sebuah kalimat dari awal sampai prediksi.
