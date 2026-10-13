@@ -521,7 +521,7 @@ Setiap grafik di bawah dijelaskan dengan empat bagian: apa yang ditampilkan, car
 
 #### 1. Distribusi data per level
 
-![Distribusi data](backend/reports/01_class_distribution.png)
+![Distribusi data](japanese-ai-agent/backend/reports/01_class_distribution.png)
 
 **Yang ditampilkan:** jumlah kalimat latih untuk tiap level (N5 sampai N1) dalam bentuk diagram batang, dengan total data di judul grafik.
 
@@ -537,7 +537,7 @@ Setiap grafik di bawah dijelaskan dengan empat bagian: apa yang ditampilkan, car
 
 #### 2. Confusion matrix
 
-![Confusion matrix](backend/reports/02_confusion_matrix.png)
+![Confusion matrix](japanese-ai-agent/backend/reports/02_confusion_matrix.png)
 
 **Yang ditampilkan:** tabel berwarna yang membandingkan level asli (baris) dengan level yang ditebak model (kolom). Angka di tiap sel adalah jumlah kalimat.
 
@@ -658,7 +658,7 @@ Setiap grafik di bawah dijelaskan dengan empat bagian: apa yang ditampilkan, car
 
 Setiap kalimat uji menghasilkan satu gambar sendiri. Ganti nama file di bawah dengan nama yang muncul di `backend/reports/walkthroughs/` (atau salin dari `index.md` di folder itu).
 
-![Kalimat contoh 1](backend/reports/walkthroughs/walkthrough_xxxxxxxx.png)
+![Kalimat contoh 1](japanese-ai-agent/backend/reports/walkthroughs/walkthrough_xxxxxxxx.png)
 ![Kalimat contoh 2](backend/reports/walkthroughs/walkthrough_yyyyyyyy.png)
 
 **Yang ditampilkan:** satu gambar berisi tiga panel yang menunjukkan perjalanan sebuah kalimat dari awal sampai prediksi.
