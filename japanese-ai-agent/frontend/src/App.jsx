@@ -6,22 +6,26 @@ import ChatInput from "./components/ChatInput";
 import ChatMessage from "./components/ChatMessage";
 import { sendChat } from "./services/api";
 
+const MODES = [
+  ["auto", "Otomatis"],
+  ["chat", "Ngobrol"],
+  ["correction", "Koreksi"],
+];
+
 export default function App() {
   const [dark, setDark] = useState(false);
   const [active, setActive] = useState("chat");
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-
   const [language, setLanguage] = useState("id");
-
+  const [mode, setMode] = useState("auto");
   const bottomRef = useRef(null);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
   }, [dark]);
 
-  // Scroll otomatis ke pesan terbaru
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
@@ -29,20 +33,43 @@ export default function App() {
   const handleSend = async () => {
     if (!input.trim() || loading) return;
     const userText = input;
+
+    // Riwayat untuk mode ngobrol: 8 pesan terakhir sebelum pesan ini
+    const history = messages
+      .slice(-8)
+      .map((m) => ({
+        role: m.sender === "user" ? "user" : "assistant",
+        content:
+          typeof m.text === "string"
+            ? m.text
+            : m.text.japanese || m.text.message || "",
+      }))
+      .filter((h) => h.content && !h.content.startsWith("⚠️"));
+
+    // Jenis balasan Sensei terakhir, supaya obrolan yang sedang berjalan bisa dilanjutkan
+    const lastSensei = [...messages]
+      .reverse()
+      .find((m) => m.sender === "sensei");
+    const previousType =
+      lastSensei && typeof lastSensei.text === "object"
+        ? lastSensei.text.type
+        : null;
+
     setMessages((prev) => [...prev, { sender: "user", text: userText }]);
     setInput("");
     setLoading(true);
 
     try {
-      const data = await sendChat(userText, language);
+      const data = await sendChat(userText, language, {
+        mode,
+        previousType,
+        history,
+      });
       setMessages((prev) => [...prev, { sender: "sensei", text: data }]);
     } catch (err) {
       setMessages((prev) => [
         ...prev,
-        {
-          sender: "sensei",
-          text: "⚠️ Gagal terhubung ke server. Pastikan backend sedang berjalan.",
-        },
+        { sender: "sensei", text: `⚠️ ${err.message}` },
       ]);
       console.error(err);
     } finally {
@@ -62,14 +89,33 @@ export default function App() {
       <main className="flex min-w-0 flex-1 flex-col">
         <header className="flex items-center justify-between border-b border-slate-100 px-6 py-3 dark:border-slate-800">
           <h2 className="font-bold dark:text-white">Sensei Chat</h2>
-          <select
-            value={language}
-            onChange={(e) => setLanguage(e.target.value)}
-            className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs dark:border-slate-700 dark:bg-slate-900 dark:text-white"
-          >
-            <option value="id">Bahasa Indonesia</option>
-            <option value="en">English</option>
-          </select>
+
+          <div className="flex items-center gap-3">
+            <div className="flex gap-1 rounded-lg bg-slate-100 p-1 text-xs dark:bg-slate-800">
+              {MODES.map(([id, label]) => (
+                <button
+                  key={id}
+                  onClick={() => setMode(id)}
+                  className={`rounded-md px-2 py-1 ${
+                    mode === id
+                      ? "bg-white font-semibold shadow dark:bg-slate-700 dark:text-white"
+                      : "text-slate-500"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            <select
+              value={language}
+              onChange={(e) => setLanguage(e.target.value)}
+              className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+            >
+              <option value="id">Bahasa Indonesia</option>
+              <option value="en">English</option>
+            </select>
+          </div>
         </header>
 
         {messages.length === 0 ? (

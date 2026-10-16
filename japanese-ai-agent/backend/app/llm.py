@@ -4,10 +4,10 @@ import re
 from openai import OpenAI
 
 from app.config import LLM_BASE_URL, LLM_API_KEY, LLM_MODEL, LLM_JSON_MODE
-from app.prompts import build_system_prompt
+from app.prompts import build_chat_prompt, build_system_prompt
 
 LANG_NAMES = {"id": "Bahasa Indonesia", "en": "English"}
-EXPECTED = ["japanese", "hiragana", "romaji", "translation", "jlpt", "feedback"]
+STR_FIELDS = ["japanese", "translation", "jlpt", "feedback"]
 
 # timeout besar: model lokal butuh waktu untuk dimuat saat pertama dipanggil
 client = OpenAI(base_url=LLM_BASE_URL, api_key=LLM_API_KEY, timeout=180)
@@ -26,40 +26,70 @@ def extract_json(text: str) -> dict:
     return data
 
 
+def _to_str(value) -> str:
+    if isinstance(value, (list, tuple)):
+        return " ".join(str(v) for v in value)
+    if isinstance(value, dict):
+        return json.dumps(value, ensure_ascii=False)
+    return str(value or "").strip()
+
+
 def normalize(data: dict) -> dict:
-    """Samakan nama field (huruf kecil) dan paksa semua nilai jadi string."""
+    """Samakan nama field (huruf kecil), paksa tipe data, dan siapkan daftar errors."""
     data = {str(k).strip().lower(): v for k, v in data.items()}
-    clean = {}
-    for key in EXPECTED:
-        value = data.get(key, "")
-        if isinstance(value, (list, tuple)):
-            value = " ".join(str(v) for v in value)
-        elif isinstance(value, dict):
-            value = json.dumps(value, ensure_ascii=False)
-        clean[key] = str(value).strip()
+    clean = {key: _to_str(data.get(key, "")) for key in STR_FIELDS}
+
+    errors = data.get("errors", [])
+    if isinstance(errors, str):
+        errors = [errors]
+    elif not isinstance(errors, list):
+        errors = []
+    clean["errors"] = [_to_str(e) for e in errors if _to_str(e)]
+
     if not clean["japanese"]:
         raise ValueError("Field 'japanese' kosong atau tidak ada")
     return clean
 
 
-def ask_sensei(message: str, language: str) -> dict:
-    language_name = LANG_NAMES.get(language, "Bahasa Indonesia")
-
+def chat_json(messages: list[dict], max_tokens: int = 900) -> dict:
+    """Kirim pesan ke LLM dan kembalikan balasannya sebagai dict JSON."""
     kwargs = {}
     if LLM_JSON_MODE:
         kwargs["response_format"] = {"type": "json_object"}  # paksa keluaran JSON
 
     completion = client.chat.completions.create(
         model=LLM_MODEL,
-        messages=[
-            {"role": "system", "content": build_system_prompt(language_name)},
-            {"role": "user", "content": message},
-        ],
-        max_tokens=900,
+        messages=messages,
+        max_tokens=max_tokens,
         temperature=0.2,
         **kwargs,
     )
-
     raw = completion.choices[0].message.content
     print("RAW:", raw)  # berguna untuk debugging
-    return normalize(extract_json(raw))
+    return extract_json(raw)
+
+
+def _with_hints(message: str, hints) -> str:
+    if not hints:
+        return message
+    notes = "\n".join(f"- {h['wrong']} -> {h['right']}: {h['reason']}" for h in hints)
+    return f"{message}\n\n[Catatan pemeriksa otomatis]\n{notes}"
+
+
+def ask_sensei(message: str, language: str, hints=None) -> dict:
+    """Mode koreksi: tiap pesan diperiksa sendiri-sendiri (tanpa riwayat)."""
+    language_name = LANG_NAMES.get(language, "Bahasa Indonesia")
+    messages = [
+        {"role": "system", "content": build_system_prompt(language_name)},
+        {"role": "user", "content": _with_hints(message, hints)},
+    ]
+    return normalize(chat_json(messages))
+
+
+def ask_partner(message: str, language: str, history: list[dict], hints=None) -> dict:
+    """Mode ngobrol: riwayat percakapan ikut dikirim agar Sensei ingat konteks."""
+    language_name = LANG_NAMES.get(language, "Bahasa Indonesia")
+    messages = [{"role": "system", "content": build_chat_prompt(language_name)}]
+    messages += history
+    messages.append({"role": "user", "content": _with_hints(message, hints)})
+    return normalize(chat_json(messages))
