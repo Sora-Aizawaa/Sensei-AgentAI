@@ -1,87 +1,31 @@
+import { GrammarList, KanjiList, VocabList, box } from "./Cards";
 import QuizCard from "./QuizCard";
+import ReadingCard from "./ReadingCard";
 
-const box =
-  "rounded-lg border border-slate-100 p-2 text-xs dark:border-slate-800";
+const ENTITY_LABEL = { vocabulary: "Kosakata", grammar: "Grammar", kanji: "Kanji" };
 
-function VocabList({ items }) {
+// Daftar referensi database yang ditemukan RAG (bisa dibuka untuk melihat isinya)
+function SourceList({ sources, title }) {
   return (
-    <ul className="space-y-2">
-      {items.map((v) => (
-        <li key={v.id} className={box}>
-          <p>
-            <span className="text-lg font-semibold">{v.word}</span>{" "}
-            <span className="text-slate-500">
-              {v.reading} · {v.romaji}
-            </span>{" "}
-            <span className="text-slate-400">{v.jlpt_level}</span>
-          </p>
-          <p className="font-semibold">{v.meaning}</p>
-          {v.example_jp && (
-            <p className="mt-1 text-slate-500">
-              {v.example_jp}
-              {v.example_tr && (
-                <span className="text-slate-400"> — {v.example_tr}</span>
-              )}
-            </p>
-          )}
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function KanjiList({ items }) {
-  return (
-    <ul className="space-y-2">
-      {items.map((k) => (
-        <li key={k.id} className={`${box} flex gap-3`}>
-          <span className="text-4xl font-semibold">{k.character}</span>
-          <div>
-            <p className="font-semibold">{k.meaning}</p>
-            <p className="text-slate-500">
-              On: {k.onyomi || "-"} · Kun:{" "}
-              {(k.kunyomi || "-").split("|").join(", ")}
-            </p>
-            <p className="text-slate-400">
-              {k.stroke_count} goresan · {k.jlpt_level}
-              {k.example_words && ` · ${k.example_words.split("|").join("、")}`}
-            </p>
-          </div>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function GrammarList({ items }) {
-  return (
-    <ul className="space-y-2">
-      {items.map((g) => (
-        <li key={g.id} className={box}>
-          <p>
-            <span className="text-lg font-semibold">{g.pattern}</span>{" "}
-            <span className="text-slate-400">{g.jlpt_level}</span>
-          </p>
-          <p className="font-semibold">{g.meaning}</p>
-          {g.formation && (
-            <p className="text-slate-500">Bentuk: {g.formation}</p>
-          )}
-          {g.example_jp && (
-            <p className="mt-1">
-              {g.example_jp}
-              {g.example_reading && (
-                <span className="block text-slate-400">
-                  {g.example_reading}
+    <div className={box}>
+      <p className="mb-1 font-semibold">{title}</p>
+      <ul className="space-y-1">
+        {sources.map((s, i) => (
+          <li key={`${s.entity}-${s.entity_id}-${i}`}>
+            <details>
+              <summary className="cursor-pointer">
+                <span className="font-semibold">{s.title}</span>{" "}
+                <span className="text-slate-400">
+                  {ENTITY_LABEL[s.entity] || s.entity} · skor {s.score}
+                  {s.used === true && " · dipakai AI"}
                 </span>
-              )}
-              {g.example_tr && (
-                <span className="block text-slate-500">{g.example_tr}</span>
-              )}
-            </p>
-          )}
-        </li>
-      ))}
-    </ul>
+              </summary>
+              <p className="mt-1 whitespace-pre-line text-slate-500">{s.text}</p>
+            </details>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
@@ -92,9 +36,7 @@ function LanguageReply({ t }) {
       <p className="text-lg font-semibold">{t.japanese}</p>
       <p className="text-slate-500">{t.hiragana}</p>
       <p className="italic text-slate-400">{t.romaji}</p>
-      <p className="border-t border-slate-100 pt-2 dark:border-slate-800">
-        🇮🇩 {t.translation}
-      </p>
+      <p className="border-t border-slate-100 pt-2 dark:border-slate-800">🇮🇩 {t.translation}</p>
 
       {t.warning && (
         <p className="rounded-lg bg-red-50 p-2 text-xs text-red-700 dark:bg-red-950 dark:text-red-200">
@@ -115,9 +57,7 @@ function LanguageReply({ t }) {
 
       {t.rule_hints?.length > 0 && (
         <div className={box}>
-          <p className="mb-1 font-semibold">
-            🧪 Pemeriksa otomatis (berbasis aturan)
-          </p>
+          <p className="mb-1 font-semibold">🧪 Pemeriksa otomatis (berbasis aturan)</p>
           <ul className="space-y-1">
             {t.rule_hints.map((h, i) => (
               <li key={i}>
@@ -147,8 +87,7 @@ function LanguageReply({ t }) {
                 <span className="text-slate-500">
                   ({v.reading} · {v.romaji})
                 </span>{" "}
-                {v.meaning}{" "}
-                <span className="text-slate-400">{v.jlpt_level}</span>
+                {v.meaning} <span className="text-slate-400">{v.jlpt_level}</span>
               </li>
             ))}
           </ul>
@@ -168,6 +107,8 @@ function LanguageReply({ t }) {
           </ul>
         </div>
       )}
+
+      {t.sources?.length > 0 && <SourceList sources={t.sources} title="📎 Referensi dari database (RAG)" />}
 
       <div>
         {t.jlpt && (
@@ -190,7 +131,7 @@ export default function ChatMessage({ msg }) {
   const t = msg.text;
   const isObject = typeof t === "object" && t !== null;
   const type = isObject ? t.type || "correction" : "text";
-  const wide = ["quiz", "vocabulary", "kanji", "grammar"].includes(type);
+  const wide = ["quiz", "vocabulary", "kanji", "grammar", "ask", "reading"].includes(type);
 
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
@@ -205,23 +146,17 @@ export default function ChatMessage({ msg }) {
 
         {isObject && (
           <div className="space-y-2">
-            {t.message && (
-              <p className={type === "info" ? "" : "text-slate-500"}>
-                {t.message}
-              </p>
-            )}
+            {t.message && <p className={type === "info" || type === "ask" ? "" : "text-slate-500"}>{t.message}</p>}
 
             {type === "vocabulary" && <VocabList items={t.items} />}
             {type === "kanji" && <KanjiList items={t.items} />}
             {type === "grammar" && <GrammarList items={t.items} />}
             {type === "quiz" && t.quiz && <QuizCard quiz={t.quiz} />}
-            {(type === "correction" || type === "chat") && (
-              <LanguageReply t={t} />
-            )}
+            {type === "reading" && t.dokkai && <ReadingCard data={t.dokkai} />}
+            {type === "ask" && t.sources?.length > 0 && <SourceList sources={t.sources} title="📎 Sumber dari database" />}
+            {(type === "correction" || type === "chat") && <LanguageReply t={t} />}
 
-            {t.route && (
-              <p className="text-[10px] text-slate-400">router: {t.route}</p>
-            )}
+            {t.route && <p className="text-[10px] text-slate-400">router: {t.route}</p>}
           </div>
         )}
       </div>

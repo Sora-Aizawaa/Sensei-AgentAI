@@ -1,0 +1,24 @@
+# Python
+venv/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Rahasia dan konfigurasi lokal (JANGAN di-commit)
+.env
+.env.*
+!.env.example
+
+# Dibuat ulang dari CSV / kode (lihat README bagian "Menjalankan di lokal")
+backend/data/sensei.db
+backend/models/
+
+# Node
+node_modules/
+dist/
+
+# Sistem dan editor
+.DS_Store
+Thumbs.db
+.idea/

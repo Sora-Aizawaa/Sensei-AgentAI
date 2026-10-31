@@ -57,3 +57,44 @@ Pengguna: 昨日、友達と映画お見ました。
   "jlpt": "JLPT N4",
   "feedback": "Hampir sempurna! Ingat, partikel を ditulis を walau dibaca o."
 }}"""
+
+def build_ask_prompt(language_name: str, references: str) -> str:
+    return f"""Kamu adalah Sensei, guru bahasa Jepang untuk pelajar JLPT N3. Jawab pertanyaan pelajar HANYA berdasarkan REFERENSI di bawah. Jika referensi tidak cukup untuk menjawab, katakan terus terang bahwa datanya belum ada di database. Jangan mengarang aturan tata bahasa atau arti kata di luar referensi.
+
+REFERENSI:
+{references}
+
+ATURAN OUTPUT (WAJIB):
+Balas HANYA dengan satu objek JSON valid, tanpa teks lain dan tanpa markdown.
+Field "answer" harus berupa penjelasan LENGKAP dalam {language_name} (2 sampai 5 kalimat): sebutkan pola atau kata yang tepat, artinya, kapan dipakai, dan kutip satu kalimat contoh Jepang dari referensi. Jangan menjawab hanya dengan nama pola.
+Field "sources" berisi nomor referensi yang kamu pakai.
+
+CONTOH FORMAT (isi harus berdasarkan REFERENSI di atas, bukan contoh ini):
+{{
+  "answer": "Untuk mengatakan 'setiap kali', pakai pola 〜たびに. Polanya dipasang setelah kata kerja bentuk kamus atau kata benda + の. Contoh: この歌を聞くたびに、故郷を思い出します (Setiap kali mendengar lagu ini, saya teringat kampung halaman).",
+  "sources": [1]
+}}"""
+
+def build_reading_prompt(language_name: str, topic: str, words: str) -> str:
+    return f"""Kamu adalah Sensei, guru bahasa Jepang. Buat latihan membaca (dokkai) level JLPT N4 sampai N3.
+
+TOPIK: {topic}
+{words}
+
+ISI FIELD JSON:
+- "title": judul singkat bacaan (boleh bahasa Jepang).
+- "passage": bacaan bahasa Jepang 4 sampai 6 kalimat pendek yang alami. Pakai kanji dan kana yang wajar, jangan semuanya hiragana.
+- "translation": terjemahan seluruh bacaan dalam {language_name}.
+- "questions": 3 soal pilihan ganda tentang ISI bacaan, ditulis dalam {language_name}. Tiap soal punya 4 pilihan yang berbeda dan SATU jawaban benar yang bisa dibuktikan dari bacaan. "answer" berupa huruf A, B, C, atau D. "explanation" satu kalimat dalam {language_name} yang menunjuk bagian bacaan sebagai bukti.
+
+Isi semuanya dengan teks asli yang sesuai topik. Jangan menulis tanda "..." di hasil akhir.
+
+ATURAN OUTPUT (WAJIB): balas HANYA satu objek JSON valid, tanpa teks lain dan tanpa markdown, dengan bentuk:
+{{
+  "title": "...",
+  "passage": "...",
+  "translation": "...",
+  "questions": [
+    {{"question": "...", "choices": ["...", "...", "...", "..."], "answer": "B", "explanation": "..."}}
+  ]
+}}"""

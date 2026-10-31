@@ -160,7 +160,7 @@ def generate(params: dict, lang: str = "id") -> ChatResponse:
                 continue
             used.add((kind, subject))
             used_subjects.add(subject)
-            questions.append({"id": len(questions) + 1, "kind": kind, **q})
+            questions.append({"id": len(questions) + 1, "kind": kind, "subject": subject, **q})
 
     if not questions:
         return ChatResponse(type="info", message=P["empty"])

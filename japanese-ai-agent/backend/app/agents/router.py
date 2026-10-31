@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from app import llm
 from app.database import repository as repo
 
-TOOL_INTENTS = {"vocabulary", "kanji", "grammar", "quiz"}
+TOOL_INTENTS = {"vocabulary", "kanji", "grammar", "quiz", "ask"}
 
 JP_CHAR = re.compile(r"[\u3040-\u30ff\u4e00-\u9fff]")
 JP_RUN = re.compile(r"[〜~]?[\u3040-\u30ff\u4e00-\u9fff]+")
@@ -17,13 +17,18 @@ KANJI_WORDS = ("kanji",)
 VOCAB_WORDS = ("kosakata", "kosa kata", "vocab", "vocabulary", "kata baru", "daftar kata")
 MEANING_WORDS = ("arti", "artinya", "makna", "meaning", "baca", "bacaan")
 EXPLAIN_WORDS = ("jelaskan", "terangkan", "explain")
+ASK_WORDS = (
+    "cara bilang", "cara mengatakan", "bagaimana mengatakan", "bagaimana cara", "apa bedanya",
+    "perbedaan", "beda antara", "kapan memakai", "kapan pakai", "how do i say", "how to say",
+    "difference between", "when to use",
+)
 READING_WORDS = ("reading", "dokkai", "読解")
 CORRECTION_WORDS = ("koreksi", "periksa kalimat", "cek kalimat", "benarkan")
 
 
 @dataclass
 class Route:
-    intent: str  # correction | chat | vocabulary | kanji | grammar | quiz | reading
+    intent: str  # correction | chat | vocabulary | kanji | grammar | quiz | ask | reading
     params: dict = field(default_factory=dict)
     via: str = "rule"  # rule | mode | sticky | llm | default
 
@@ -72,6 +77,7 @@ ROUTER_PROMPT = """Klasifikasikan maksud pesan pengguna aplikasi belajar bahasa 
 - kanji: menanyakan kanji
 - grammar: menanyakan pola tata bahasa
 - quiz: meminta soal latihan atau kuis
+- ask: bertanya cara mengatakan sesuatu, perbedaan dua pola, atau kapan memakai sebuah pola
 Balas HANYA JSON: {"intent": "<salah satu di atas>"}"""
 
 
@@ -106,6 +112,10 @@ def route(message: str, mode: str = "auto", previous_type=None) -> Route:
             params["focus"] = "vocabulary"
         return Route("quiz", params, "rule")
 
+    # Pertanyaan bebas yang dijawab dengan RAG: cara mengatakan, perbandingan, kapan memakai
+    if _has_any(lower, tokens, ASK_WORDS):
+        return Route("ask", params, "rule")
+
     pattern_mark = "〜" in message or "~" in message
     if _has_any(lower, tokens, GRAMMAR_WORDS) or (
         pattern_mark and _has_any(lower, tokens, EXPLAIN_WORDS + MEANING_WORDS)
@@ -123,6 +133,9 @@ def route(message: str, mode: str = "auto", previous_type=None) -> Route:
         has_jp and short_word and _has_any(lower, tokens, MEANING_WORDS)
     ):
         return Route("vocabulary", params, "rule")
+
+    if _has_any(lower, tokens, EXPLAIN_WORDS) and not has_jp:
+        return Route("ask", params, "rule")  # "jelaskan ..." tanpa kata Jepang = pertanyaan bebas
 
     # 2. Mode percakapan
     if _has_any(lower, tokens, CORRECTION_WORDS):

@@ -70,8 +70,18 @@ export default function Sidebar({ dark, setDark, active, setActive }) {
       <p className="mb-2 mt-6 px-3 text-xs text-slate-400">
         Pengaturan & Bantuan
       </p>
-      <Item icon={Settings} label="Pengaturan" />
-      <Item icon={HelpCircle} label="Bantuan" />
+      <Item
+        icon={Settings}
+        label="Pengaturan"
+        active={active === "settings"}
+        onClick={() => setActive("settings")}
+      />
+      <Item
+        icon={HelpCircle}
+        label="Bantuan"
+        active={active === "help"}
+        onClick={() => setActive("help")}
+      />
 
       {/* Toggle tema */}
       <div className="mt-auto">

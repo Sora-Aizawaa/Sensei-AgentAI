@@ -1,22 +1,28 @@
 import { useState } from "react";
+import { saveQuizResult } from "../services/progress";
 
 export default function QuizCard({ quiz }) {
   const questions = quiz.questions;
   const [index, setIndex] = useState(0);
   const [picked, setPicked] = useState(null);
-  const [score, setScore] = useState(0);
+  const [answers, setAnswers] = useState([]); // jejak jawaban untuk halaman Progress
   const [done, setDone] = useState(false);
 
   const q = questions[index];
+  const score = answers.filter((a) => a.correct).length;
 
   const choose = (i) => {
     if (picked !== null) return; // jawaban sudah dipilih
     setPicked(i);
-    if (i === q.answer) setScore((s) => s + 1);
+    setAnswers((prev) => [
+      ...prev,
+      { kind: q.kind, subject: q.subject, correct: i === q.answer },
+    ]);
   };
 
   const next = () => {
     if (index + 1 >= questions.length) {
+      saveQuizResult({ title: quiz.title, answers }); // dicatat sekali, saat kuis selesai
       setDone(true);
     } else {
       setIndex(index + 1);
@@ -27,7 +33,7 @@ export default function QuizCard({ quiz }) {
   const restart = () => {
     setIndex(0);
     setPicked(null);
-    setScore(0);
+    setAnswers([]);
     setDone(false);
   };
 
@@ -37,6 +43,9 @@ export default function QuizCard({ quiz }) {
         <p className="font-semibold">{quiz.title}: selesai 🎉</p>
         <p className="text-2xl font-bold">
           {score} / {questions.length}
+        </p>
+        <p className="text-xs text-slate-400">
+          Hasil dicatat di menu Progress.
         </p>
         <button
           onClick={restart}

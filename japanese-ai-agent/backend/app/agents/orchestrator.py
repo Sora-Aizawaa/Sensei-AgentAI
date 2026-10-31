@@ -1,14 +1,23 @@
 """Orchestrator: Router memilih agent, lalu agent yang dipilih bekerja."""
+import re
 import traceback
 
 from app import llm
-from app.agents import quiz, tools
+from app.agents import ask, quiz, reading_agent, tools
 from app.agents.router import route
+from app.config import RAG_IN_CHAT
 from app.database.repository import analyze_text
 from app.ml.difficulty import predict_level
 from app.nlp.checks import check_text
 from app.nlp.reading import reading as japanese_reading
+from app.rag import context as rag
 from app.schemas import ChatRequest, ChatResponse
+
+
+def _free_topic(message: str):
+    """Topik bebas dari kalimat seperti 'buat bacaan tentang musim panas'."""
+    m = re.search(r"(?:tentang|about)\s+(.{2,60})", message, re.IGNORECASE)
+    return m.group(1).strip(" ?.!") if m else None
 
 
 def _history(req: ChatRequest) -> list[dict]:
@@ -47,11 +56,17 @@ def _enrich(result: ChatResponse, req: ChatRequest, hints: list[dict]) -> None:
 
 def _run_language(req: ChatRequest, intent: str) -> ChatResponse:
     hints = check_text(req.message)
+
+    # RAG: cari materi yang relevan di database, lalu sertakan sebagai referensi untuk LLM
+    hits = rag.retrieve(req.message, k=3) if RAG_IN_CHAT else []
+    context = rag.reference_block(hits)
+
     if intent == "chat":
-        data = llm.ask_partner(req.message, req.language, _history(req), hints)
+        data = llm.ask_partner(req.message, req.language, _history(req), hints, context)
     else:
-        data = llm.ask_sensei(req.message, req.language, hints)
+        data = llm.ask_sensei(req.message, req.language, hints, context)
     result = ChatResponse.model_validate({**data, "type": intent})
+    result.sources = rag.to_sources(hits)
     _enrich(result, req, hints)
     return result
 
@@ -64,12 +79,11 @@ def handle_message(req: ChatRequest) -> ChatResponse:
         response = quiz.run(decision.params, req.language)
     elif decision.intent in ("vocabulary", "kanji", "grammar"):
         response = tools.run(decision.intent, decision.params, req.language)
+    elif decision.intent == "ask":
+        response = ask.run(req.message, req.language)
     elif decision.intent == "reading":
-        response = ChatResponse(
-            type="info",
-            message="Latihan reading belum tersedia, ini rencana tahap berikutnya. "
-            "Sementara itu kamu bisa mencoba kuis, kosakata, atau mengobrol dengan Sensei.",
-        )
+        topic = decision.params.get("topic") or _free_topic(req.message)
+        response = reading_agent.run(topic, req.language)
     else:  # chat atau correction
         response = _run_language(req, decision.intent)
 

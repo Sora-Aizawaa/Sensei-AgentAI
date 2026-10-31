@@ -34,7 +34,14 @@ class ChatResponse(BaseModel):
     db_grammar: list[dict] = Field(default_factory=list)
     items: list[dict] = Field(default_factory=list)  # hasil Vocabulary/Kanji/Grammar Tool
     quiz: Optional[dict] = None  # hasil Quiz Agent
+    sources: list[dict] = Field(default_factory=list)  # referensi database yang dipakai (RAG)
+    dokkai: Optional[dict] = None  # hasil Reading Agent (bacaan + soal)
 
 
 class DifficultyRequest(BaseModel):
     text: str = Field(min_length=1, max_length=1000)
+
+
+class DokkaiRequest(BaseModel):
+    topic: Optional[str] = Field(default=None, max_length=100)
+    language: str = "id"

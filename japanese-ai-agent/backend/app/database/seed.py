@@ -7,18 +7,18 @@ from app.database.schema import SCHEMA
 
 DATA = Path(__file__).resolve().parents[2] / "data"
 
-# kolom pertama = kolom unik (kunci)
+# kolom pertama = kolom unik (kunci); pattern = semua file yang cocok akan dibaca
 TABLES = {
     "vocabulary": {
-        "file": "vocabulary.csv",
+        "pattern": "vocabulary*.csv",
         "cols": ["word", "reading", "romaji", "jlpt_level", "pos", "topic", "example_jp"],
     },
     "kanji": {
-        "file": "kanji.csv",
+        "pattern": "kanji*.csv",
         "cols": ["character", "onyomi", "kunyomi", "jlpt_level", "stroke_count", "example_words"],
     },
     "grammar": {
-        "file": "grammar.csv",
+        "pattern": "grammar*.csv",
         "cols": ["pattern", "jlpt_level", "formation", "example_jp", "example_reading"],
     },
 }
@@ -41,9 +41,9 @@ def translation_columns(header):
 
 
 def seed_table(conn, table, cfg):
-    path = DATA / cfg["file"]
-    if not path.exists():
-        print(f"[dilewati] {path.name} tidak ditemukan")
+    paths = sorted(DATA.glob(cfg["pattern"]))  # contoh: vocabulary.csv, vocabulary_n4.csv, ...
+    if not paths:
+        print(f"[dilewati] tidak ada file {cfg['pattern']} di {DATA}")
         return
 
     cols = cfg["cols"]
@@ -61,31 +61,31 @@ def seed_table(conn, table, cfg):
         "ON CONFLICT(entity, entity_id, field, lang) DO UPDATE SET text=excluded.text"
     )
 
-    count = 0
-    # utf-8-sig: aman untuk CSV yang disimpan dari Excel/Notepad (dengan BOM)
-    with open(path, encoding="utf-8-sig", newline="") as f:
-        reader = csv.DictReader(f)
-        tcols = translation_columns(reader.fieldnames or [])
-        for row in reader:
-            values = []
-            for c in cols:
-                v = (row.get(c) or "").strip()
-                if c == "stroke_count":
-                    v = int(v) if v else None
-                values.append(v)
-            if not values[0]:
-                continue
+    for path in paths:
+        count = 0
+        # utf-8-sig: aman untuk CSV yang disimpan dari Excel/Notepad (dengan BOM)
+        with open(path, encoding="utf-8-sig", newline="") as f:
+            reader = csv.DictReader(f)
+            tcols = translation_columns(reader.fieldnames or [])
+            for row in reader:
+                values = []
+                for c in cols:
+                    v = (row.get(c) or "").strip()
+                    if c == "stroke_count":
+                        v = int(v) if v else None
+                    values.append(v)
+                if not values[0]:
+                    continue
 
-            conn.execute(upsert_sql, values)
-            entity_id = conn.execute(select_sql, (values[0],)).fetchone()[0]
+                conn.execute(upsert_sql, values)
+                entity_id = conn.execute(select_sql, (values[0],)).fetchone()[0]
 
-            for col, field, lang in tcols:
-                text = (row.get(col) or "").strip()
-                if text:
-                    conn.execute(trans_sql, (table, entity_id, field, lang, text))
-            count += 1
-
-    print(f"{table}: {count} baris")
+                for col, field, lang in tcols:
+                    text = (row.get(col) or "").strip()
+                    if text:
+                        conn.execute(trans_sql, (table, entity_id, field, lang, text))
+                count += 1
+        print(f"{table}: {count} baris dari {path.name}")
 
 
 def main():

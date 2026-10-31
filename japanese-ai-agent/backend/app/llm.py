@@ -51,7 +51,7 @@ def normalize(data: dict) -> dict:
     return clean
 
 
-def chat_json(messages: list[dict], max_tokens: int = 900) -> dict:
+def chat_json(messages: list[dict], max_tokens: int = 900, temperature: float = 0.2) -> dict:
     """Kirim pesan ke LLM dan kembalikan balasannya sebagai dict JSON."""
     kwargs = {}
     if LLM_JSON_MODE:
@@ -61,7 +61,7 @@ def chat_json(messages: list[dict], max_tokens: int = 900) -> dict:
         model=LLM_MODEL,
         messages=messages,
         max_tokens=max_tokens,
-        temperature=0.2,
+        temperature=temperature,
         **kwargs,
     )
     raw = completion.choices[0].message.content
@@ -69,27 +69,31 @@ def chat_json(messages: list[dict], max_tokens: int = 900) -> dict:
     return extract_json(raw)
 
 
-def _with_hints(message: str, hints) -> str:
-    if not hints:
-        return message
-    notes = "\n".join(f"- {h['wrong']} -> {h['right']}: {h['reason']}" for h in hints)
-    return f"{message}\n\n[Catatan pemeriksa otomatis]\n{notes}"
+def _with_extras(message: str, hints, context: str = "") -> str:
+    """Tempel catatan pemeriksa aturan dan referensi database ke pesan pengguna."""
+    extra = []
+    if hints:
+        notes = "\n".join(f"- {h['wrong']} -> {h['right']}: {h['reason']}" for h in hints)
+        extra.append(f"[Catatan pemeriksa otomatis]\n{notes}")
+    if context:
+        extra.append(context)
+    return message + ("\n\n" + "\n\n".join(extra) if extra else "")
 
 
-def ask_sensei(message: str, language: str, hints=None) -> dict:
+def ask_sensei(message: str, language: str, hints=None, context: str = "") -> dict:
     """Mode koreksi: tiap pesan diperiksa sendiri-sendiri (tanpa riwayat)."""
     language_name = LANG_NAMES.get(language, "Bahasa Indonesia")
     messages = [
         {"role": "system", "content": build_system_prompt(language_name)},
-        {"role": "user", "content": _with_hints(message, hints)},
+        {"role": "user", "content": _with_extras(message, hints, context)},
     ]
     return normalize(chat_json(messages))
 
 
-def ask_partner(message: str, language: str, history: list[dict], hints=None) -> dict:
+def ask_partner(message: str, language: str, history: list[dict], hints=None, context: str = "") -> dict:
     """Mode ngobrol: riwayat percakapan ikut dikirim agar Sensei ingat konteks."""
     language_name = LANG_NAMES.get(language, "Bahasa Indonesia")
     messages = [{"role": "system", "content": build_chat_prompt(language_name)}]
     messages += history
-    messages.append({"role": "user", "content": _with_hints(message, hints)})
+    messages.append({"role": "user", "content": _with_extras(message, hints, context)})
     return normalize(chat_json(messages))
